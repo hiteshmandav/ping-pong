@@ -17,6 +17,7 @@ var computer = {
     y : canvas.height/2 - 100/2,
     color : "white",
     score : 0,
+    level : 0.1,
 }
 
 var ball = {
@@ -61,32 +62,104 @@ function drawNet(){
     }
 }
 
+function paddlecolitiion(ball, paddle){
+    paddle.top = paddle.y;
+    paddle.left = paddle.x;
+    paddle.right = paddle.x + paddle.width;
+    paddle.bottom = paddle.y + paddle.height;
+
+    ball.top = ball.y-ball.radius;
+    ball.left = ball.x -ball.radius;
+    ball.right = ball.x + ball.radius;
+    ball.bottom = ball.y + ball.radius;
+
+    //var collision = (paddle.top < ball.bottom && paddle.left < ball.right && paddle.right > ball.left && paddle.bottom > ball.top)
+
+    //return collision;
+    return paddle.top < ball.bottom && paddle.left < ball.right && paddle.right > ball.left && paddle.bottom > ball.top;
+}
 
 function render(){
     ctx.clearRect(0, 0 , canvas.width, canvas.height);
+    drawRect("black", 0, 0 , canvas.width, canvas.height);
     drawRect(player.color, player.x,player.y,player.width, player.height);
     drawRect(computer.color, computer.x,computer.y,computer.width, computer.height);
     drawCircle(ball.color, ball.x, ball.y ,ball.radius);
-    drawNet()
+    drawNet();
     writeText(player.score, canvas.width/4, canvas.height/5);
     writeText(computer.score, 3*canvas.width/4, canvas.height/5);
 }
 
+function resetall(){
+    ball.x = canvas.width/2;
+    ball.y = canvas.height/2;
+    // computer.x = canvas.width - 10;
+    // computer.y = canvas.height/2 - 100/2;
+    ball.speed  = 5;
+    // computer.level = 0.1;
+    ball.speed = - ball.speed;
+}
+
+function moveUserPaddle(e){
+    let rect = canvas.getBoundingClientRect();
+    let relativeY = e.clientY - rect.top ;
+    if(relativeY > 0 && relativeY < canvas.height) {
+        player.y = relativeY - player.height/2;
+    }
+}
+
+function computerAI(){
+    computer.y += (ball.y - (computer.y + computer.height/2)) * computer.level;
+}
+
 function update(){
-    ball.x += ball.velocityX;
-    ball.y += ball.velocityY;
+    
+    
 
     if ( ball.y + ball.radius  > canvas.height || ball.y - ball.radius  < 0 ){
         ball.velocityY = -ball.velocityY;
-    }else if ( ball.x + ball.radius  > canvas.width || ball.x - ball.radius  < 0){
-        ball.velocityX = -ball.velocityX;
     }
+
+    if ( ball.x + ball.radius  > canvas.width ){
+        player.score += 1;
+        resetall();
+    }  if(ball.x - ball.radius  < 0 ){
+        computer.score += 1;
+        resetall();
+    }
+
+    var paddle = (ball.x < canvas.width/2) ? player : computer; 
+
+    if (paddlecolitiion(ball, paddle)) {
+       let colidepoint = ((ball.y -(paddle.y + paddle.height/2))/paddle.height/2);
+
+       let radangle =   (Math.PI/4)*colidepoint;
+
+       let direction = (ball.x < canvas.width/2)? 1 : -1;
+
+       ball.velocityX = direction * ball.speed * Math.cos(radangle);
+       ball.velocityY = direction * ball.speed * Math.sin(radangle);
+       
+       ball.speed += 1;
+       computer.level+=0.1;
+       
+       
+    }  
+    ball.x += ball.velocityX;
+    ball.y += ball.velocityY;
+
+    console.log("velocityx , velocityy :: ", ball.velocityX, ball.velocityY);
+       
+    computerAI();
 }
 function game(){
+    
     update();
     render();
+   
 }
 
 const framesRate = 50;
 
+document.addEventListener("mousemove",moveUserPaddle)
 setInterval(game, (1000/framesRate))
